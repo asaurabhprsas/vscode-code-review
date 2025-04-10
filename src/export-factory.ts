@@ -27,6 +27,7 @@ import {
   sortLineSelections,
   rangeFromStringDefinition,
   escapeEndOfLineForCsv,
+  escapeDoubleQuotesForCsv,
   standardizeFilename,
   splitStringDefinition,
 } from './utils/workspace-util';
@@ -111,6 +112,22 @@ export class ExportFactory {
       (this.currentFilename === null || entry.filename === this.currentFilename) &&
       (!this.filterByPriority || entry.priority != 1) // prio value 1 = green traffic light
     );
+  }
+
+  /**
+   * Properly escape newlines and quotes in CVS entries
+   * @param entry The CVS entry to escape
+   */
+  private escapeCVSEntry(entry: CsvEntry): CsvEntry {
+    entry.comment = escapeEndOfLineForCsv(escapeDoubleQuotesForCsv(entry.comment));
+    entry.title = entry.title ? escapeDoubleQuotesForCsv(entry.title) : entry.title;
+    entry.filename = escapeDoubleQuotesForCsv(entry.filename);
+    entry.lines = escapeDoubleQuotesForCsv(entry.lines);
+    entry.sha = escapeDoubleQuotesForCsv(entry.sha);
+    entry.additional = entry.additional ? escapeDoubleQuotesForCsv(entry.additional) : entry.additional;
+    entry.category = escapeDoubleQuotesForCsv(entry.category);
+
+    return entry;
   }
 
   private exportHandlerMap = new Map<ExportFormat, ExportMap>([
@@ -216,7 +233,7 @@ export class ExportFactory {
           fs.writeFileSync(outputFile, `title,description${EOL}`);
         },
         handleData: (outputFile: string, row: CsvEntry): CsvEntry => {
-          row.comment = escapeEndOfLineForCsv(row.comment);
+          row = this.escapeCVSEntry(row);
 
           this.includeCodeSelection ? (row.code = this.getCodeForFile(row.filename, row.lines)) : delete row.code;
           // cut the description (100 chars max) along with '...' at the end
@@ -249,7 +266,7 @@ export class ExportFactory {
           fs.writeFileSync(outputFile, `title,body,labels,state,assignee${EOL}`);
         },
         handleData: (outputFile: string, row: CsvEntry): CsvEntry => {
-          row.comment = escapeEndOfLineForCsv(row.comment);
+          row = this.escapeCVSEntry(row);
 
           this.includeCodeSelection ? (row.code = this.getCodeForFile(row.filename, row.lines)) : delete row.code;
           // cut the description (100 chars max) along with '...' at the end
@@ -288,7 +305,7 @@ export class ExportFactory {
           );
         },
         handleData: (outputFile: string, row: CsvEntry): CsvEntry => {
-          row.comment = escapeEndOfLineForCsv(row.comment);
+          row = this.escapeCVSEntry(row);
 
           this.includeCodeSelection ? (row.code = this.getCodeForFile(row.filename, row.lines)) : delete row.code;
           // cut the description (100 chars max) along with '...' at the end
